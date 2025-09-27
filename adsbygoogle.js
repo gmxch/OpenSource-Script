@@ -1,3 +1,6 @@
+/*
+ https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js
+*/
 (function(sttc){'use strict';var aa=Object.defineProperty,ba=globalThis,ca=typeof Symbol==="function"&&typeof Symbol("x")==="symbol",da={},ea={};function fa(a,b,c){if(!c||a!=null){c=ea[b];if(c==null)return a[b];c=a[c];return c!==void 0?c:a[b]}} 
 function ha(a,b,c){if(b)a:{var d=a.split(".");a=d.length===1;var e=d[0],f;!a&&e in da?f=da:f=ba;for(e=0;e<d.length-1;e++){var g=d[e];if(!(g in f))break a;f=f[g]}d=d[d.length-1];c=ca&&c==="es6"?f[d]:null;b=b(c);b!=null&&(a?aa(da,d,{configurable:!0,writable:!0,value:b}):b!==c&&(ea[d]===void 0&&(a=Math.random()*1E9>>>0,ea[d]=ca?ba.Symbol(d):"$jscp$"+a+"$"+d),aa(f,ea[d],{configurable:!0,writable:!0,value:b})))}}ha("Symbol.dispose",function(a){return a?a:Symbol("Symbol.dispose")},"es_next");/* 
  
