@@ -1,9 +1,6 @@
 <?php
-foreach (glob(__DIR__ . "/*.txt") as $file) {
-    if (strpos($file, 'cookie_') !== false) {
-        unlink($file);
-    }
-}
+
+@unlink("adlink.txt");
 
 function cURL($url, $method = 'GET', $postData = null, $cookieFile = null, $headers = [], $referer = '', $userAgent = 'Mozilla/5.0') {
     $ch = curl_init($url);
@@ -37,33 +34,34 @@ function cURL($url, $method = 'GET', $postData = null, $cookieFile = null, $head
 
 
 $url = readline("adlink: ");
-preg_match('/\/([^\/]+)$/', $url, $idMatch);
-$id = $idMatch[1] ?? uniqid();
-echo "ID: $id\n";
+$host = parse_url($url, PHP_URL_HOST) ?? '';
+$path = parse_url($url, PHP_URL_PATH) ?? '';
 
-// Mapping domain
 $urlMap = "blog.adlink.click";
 $referer = "https://www.diudemy.com/";
-$adlink = str_replace("link.adlink.click", $urlMap, $url);
-echo "URL: $adlink\n";
+$shortlink = str_replace("link.adlink.click", $urlMap, $url);
 
-// Step 1: Ambil HTML dan simpan cookie
-$cookieFile = __DIR__ . "/cookie_{$id}.txt";
-$html = cURL($adlink, 'GET', null, $cookieFile, [], $referer);
+$cookieFile = __DIR__ . "/adlink.txt";
+$start = cURL($shortlink, 'GET', null, $cookieFile, [], $referer);
 
-// Step 2: Parsing form hidden
-preg_match('/name="ad_form_data" value="([^"]+)"/', $html, $adMatch);
-preg_match('/name="_csrfToken"\s+[^>]*value="([^"]+)"/i', $html, $csrfMatch);
-preg_match('/name="_Token\[fields\]"[^>]+value="([^"]+)"/', $html, $fieldsMatch);
-preg_match('/name="_Token\[unlocked\]"[^>]+value="([^"]+)"/', $html, $unlockMatch);
+preg_match(
+    '/name="ad_form_data" value="([^"]+)"/', $start, $adMatch);
+preg_match(
+    '/name="_csrfToken"\s+[^>]*value="([^"]+)"/i', $start, $csrfMatch);
+preg_match(
+    '/name="_Token\[fields\]"[^>]+value="([^"]+)"/', $start, $fieldsMatch);
+preg_match(
+    '/name="_Token\[unlocked\]"[^>]+value="([^"]+)"/', $start, $unlockMatch);
 
 $ad_form_data   = $adMatch[1] ?? '';
 $csrf           = $csrfMatch[1] ?? '';
 $token_fields   = $fieldsMatch[1] ?? '';
 $token_unlocked = $unlockMatch[1] ?? '';
 
-echo "\n$ad_form_data\n$csrf\n$token_fields\n$token_unlocked\n";
-sleep(5);
+//echo "\n$ad_form_data\n$csrf\n$token_fields\n$token_unlocked\n";
+echo "wait\t";
+sleep(4);
+
 
 
 $postData = [
@@ -74,12 +72,10 @@ $postData = [
     '_Token[unlocked]' => $token_unlocked
 ];
 
-$response = cURL("https://{$urlMap}/links/go", 'POST', $postData, $cookieFile, [
+$final = cURL("https://{$urlMap}/links/go", 'POST', $postData, $cookieFile, [
     "X-Requested-With: XMLHttpRequest",
     "Accept: application/json,text/javascript,*/*;q=0.01"
 ], $referer);
-
-
-$data = json_decode($response, true);
+$data = json_decode($final, true);
 echo "Status: {$data['status']}\n";
 echo "URL: {$data['url']}\n";
