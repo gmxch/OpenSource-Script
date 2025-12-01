@@ -1,4 +1,10 @@
 <?php
+    
+
+
+
+
+
 
 
 function cURL($url, $method = 'GET', $postData = null, $cookieFile = null, $headers = [], $referer = '', $userAgent = 'Mozilla/5.0', $verbose = false) {
@@ -38,7 +44,65 @@ function cURL($url, $method = 'GET', $postData = null, $cookieFile = null, $head
     return $response;
 }
 
+
 function captcha($CCContent, $jsUrl, $cookieFile = null) {
+    global $apikey;
+
+    preg_match(
+        '/xhr\.open\("POST",\s*"([^"]+)"/', $CCContent, $postMatch);
+    $endpoint = isset($postMatch[1]) ? "https://$jsUrl{$postMatch[1]}" : null;
+    preg_match(
+        '/<img\s+src="([^"]+)"/', $CCContent, $imgMatch);
+    $imageUrl = isset($imgMatch[1]) ? "https://$jsUrl{$imgMatch[1]}" : null;
+    $imageContent = cURL($imageUrl, 'GET', null, $cookieFile, [], "https://$jsUrl");
+    file_put_contents("captcha.png", $imageContent);
+    echo "Saved captcha.png\n";
+
+    preg_match('/captchaData\s*=\s*\{\s*"options"\s*:\s*\[([^\]]+)\]/', $CCContent, $iconMatch);
+    $iconsRaw = $iconMatch[1] ?? '';
+    $icons = array_map(fn($i) => trim(trim($i), '"'), explode(',', $iconsRaw));
+
+    preg_match('/xhr\.send\(\s*"([^"]+)"\s*\+\s*([a-zA-Z0-9_]+)\s*\)/', $CCContent, $match);
+    if (!isset($match[1], $match[2])) {
+        echo "invalid XHR Format\n";
+        return;
+    }
+    parse_str($match[1], $payload);
+    echo "option   =\n";
+    foreach ($icons as $i => $icon) {
+        echo "  [$i] $icon\n";
+    }
+
+    $imgData     = file_get_contents(__DIR__ . "/captcha.png");
+    $base64Image = base64_encode($imgData);
+    require_once(__DIR__ . "/captcha.php");
+    getUserInfo($apikey);
+
+    $solved = fa_iconSolver($apikey, $base64Image);
+    //$answer = $solved['request'];
+
+    $index = array_search($solved, $icons);
+    if ($index === false) {
+        echo "result not match\n";
+        return;
+    }
+
+    $indexKey = array_search('', $payload, true);
+    if ($indexKey !== false) {
+        $payload[$indexKey] = $index;
+    }
+    unset($payload['iconIndex']);
+
+    $body = http_build_query($payload);
+    print_r($body);
+    $response = cURL($endpoint, 'POST', $body, $cookieFile, [], "https://$jsUrl");
+
+    //@unlink("captcha.png");
+    file_put_contents('cc.json', $response, JSON_PRETTY_PRINT);
+}
+
+
+function captchaManual($CCContent, $jsUrl, $cookieFile = null) {
     preg_match('/xhr\.open\("POST",\s*"([^"]+)"/', $CCContent, $postMatch);
     $endpoint = isset($postMatch[1]) ? "https://$jsUrl{$postMatch[1]}" : null;
     preg_match('/<img\s+src="([^"]+)"/', $CCContent, $imgMatch);
@@ -60,6 +124,7 @@ function captcha($CCContent, $jsUrl, $cookieFile = null) {
         echo "  [$i] $icon\n";
     }
     $index = readline("check ur captcha.png: ");
+    //fa_iconSolve($apikey, $base64);
     $indexKey = null;
     foreach ($payload as $key => $value) {
         if ($value === '') {
@@ -70,14 +135,16 @@ function captcha($CCContent, $jsUrl, $cookieFile = null) {
     $payload[$indexKey] = $index;
     unset($payload['iconIndex']);
     $body = http_build_query($payload);
+    print_r($body);
     $response = cURL($endpoint, 'POST', $body, $cookieFile, [], "https://$jsUrl");
     @unlink("captcha.png");
     file_put_contents('cc.json', $response, JSON_PRETTY_PRINT);
 
 }
 
+
 function submit($js, $html, $json) {
-    system("clear");
+    //system("clear");
     $js = file_get_contents($js);
     $html = file_get_contents($html);
     $json = file_get_contents($json);
@@ -207,6 +274,7 @@ if (preg_match('/location\.href\s*=\s*"([^"]+)"/', $link, $match)) {
     }
 }
 
+exit;
 
 function bypass(&$articleUrl, &$payload, $cookieFile, $jsUrl, $path) {
     $html = cURL($articleUrl, 'POST', $payload, $cookieFile, [], $articleUrl, 'Mozilla/5.0', true);
@@ -214,17 +282,16 @@ function bypass(&$articleUrl, &$payload, $cookieFile, $jsUrl, $path) {
     @unlink("cc.json");
     file_put_contents("step.html", $html);
 
-    // Cek apakah sudah selesai
     preg_match("/location\\.href=['\"]([^'\"]+)['\"]/", $html, $resultUrl);
     if (isset($resultUrl[1])) {
-        echo "URL:\n  " . $resultUrl[1] . "\n";
+        echo "URL:\t  " . $resultUrl[1] . "\n";
         array_map('unlink', glob("step*"));
         @unlink("article.log");
         return true;
     }
     preg_match('/<h1[^>]*>\s*(STEP\s+\d+\/\d+)\s*<\/h1>/i', $html, $stepPage);
     echo "\n" . $stepPage[1] . "\n";
-    // Ambil SL.js
+    
     preg_match('/src="\/sl\/([a-z0-9]+)\.js"/', $html, $slJs);
     if (!isset($slJs[1])) return false;
 
