@@ -12,7 +12,7 @@
 (function() {
     'use strict';
 
-    function injectFakeAds() {
+    function PatchAds() {
         const container = document.querySelector('.container-fluid .row');
         if (!container) return;
         const adTypes = [
@@ -41,14 +41,12 @@
             }
             container.appendChild(fakeAd);
         }
-        console.log('[AntiAdblock] Dummy ads injected.');
     }
 
-    function fakeNetworkRequests() {
+    function PatchNetwork() {
         const originalFetch = window.fetch;
         window.fetch = function(url, options) {
             if (/revbid\.net|prebid\.revbid\.net/.test(url)) {
-                console.log('[AntiAdblock] Fake fetch:', url);
                 return Promise.resolve(new Response(JSON.stringify({status:200})));
             }
             return originalFetch.apply(this, arguments);
@@ -61,14 +59,13 @@
         const sendXHR = window.XMLHttpRequest.prototype.send;
         window.XMLHttpRequest.prototype.send = function(body) {
             if (this.isFake) {
-                console.log('[AntiAdblock] Fake XHR:', this.responseURL);
                 this.onload && this.onload();
             } else {
                 sendXHR.apply(this, arguments);
             }
         };
     }
-    function forceAdsVisible() {
+    function PatchVisibile() {
         const ads = document.querySelectorAll('.placed-ad, [id^="revbid-"], [id^="google_ads_"]');
         ads.forEach(ad => {
             ad.style.display = 'block';
@@ -78,9 +75,9 @@
         });
     }
     setTimeout(() => {
-        injectFakeAds();
-        fakeNetworkRequests();
-        forceAdsVisible();
+        PatchAds();
+        PatchNetwork();
+        PatchVisibile();
     }, 1500);
 })();
 
