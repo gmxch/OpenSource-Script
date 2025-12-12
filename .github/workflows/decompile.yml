@@ -52,7 +52,7 @@ jobs:
         EOF
 
     - name: Upload Decompiled Result
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: decompiled_payload
         path: decompiled_payload.py
